@@ -34,7 +34,7 @@ namespace Catch {
             ~GeneratorTracker();
 
             static GeneratorTracker& acquire( TrackerContext& ctx, TestCaseTracking::NameAndLocation const& nameAndLocation ) {
-                std::shared_ptr<GeneratorTracker> tracker;
+                GeneratorTracker* tracker;
 
                 ITracker& currentTracker = ctx.currentTracker();
                 // Under specific circumstances, the generator we want
@@ -48,18 +48,23 @@ namespace Catch {
                 //     }
                 //
                 // without it, the code above creates 5 nested generators.
-                if (currentTracker.nameAndLocation() == nameAndLocation) {
-                    auto thisTracker = currentTracker.parent().findChild(nameAndLocation);
-                    assert(thisTracker);
-                    assert(thisTracker->isGeneratorTracker());
-                    tracker = std::static_pointer_cast<GeneratorTracker>(thisTracker);
-                } else if ( TestCaseTracking::ITrackerPtr childTracker = currentTracker.findChild( nameAndLocation ) ) {
+                if ( currentTracker.nameAndLocation() == nameAndLocation ) {
+                    auto thisTracker =
+                        currentTracker.parent().findChild( nameAndLocation );
+                    assert( thisTracker );
+                    assert( thisTracker->isGeneratorTracker() );
+                    tracker = static_cast<GeneratorTracker*>( thisTracker );
+                } else if ( ITracker* childTracker =
+                                currentTracker.findChild( nameAndLocation ) ) {
                     assert( childTracker );
                     assert( childTracker->isGeneratorTracker() );
-                    tracker = std::static_pointer_cast<GeneratorTracker>( childTracker );
+                    tracker = static_cast<GeneratorTracker*>( childTracker );
                 } else {
-                    tracker = std::make_shared<GeneratorTracker>( nameAndLocation, ctx, &currentTracker );
-                    currentTracker.addChild( tracker );
+                    auto newTracker =
+                        Catch::Detail::make_unique<GeneratorTracker>(
+                            nameAndLocation, ctx, &currentTracker );
+                    tracker = newTracker.get();
+                    currentTracker.addChild( std::move(newTracker) );
                 }
 
                 if( !tracker->isComplete() ) {
@@ -92,7 +97,7 @@ namespace Catch {
                     if ( std::find_if(
                              m_children.begin(),
                              m_children.end(),
-                             []( TestCaseTracking::ITrackerPtr tracker ) {
+                             []( TestCaseTracking::ITrackerPtr const& tracker ) {
                                  return tracker->hasStarted();
                              } ) != m_children.end() ) {
                         return false;
@@ -101,7 +106,7 @@ namespace Catch {
                     // No children have started. We need to check if they _can_
                     // start, and thus we should wait for them, or they cannot
                     // start (due to filters), and we shouldn't wait for them
-                    auto* parent = m_parent;
+                    ITracker* parent = m_parent;
                     // This is safe: there is always at least one section
                     // tracker in a test case tracking tree
                     while ( !parent->isSectionTracker() ) {
@@ -111,7 +116,7 @@ namespace Catch {
                             "Missing root (test case) level section" );
 
                     auto const& parentSection =
-                        static_cast<SectionTracker&>( *parent );
+                        static_cast<SectionTracker const&>( *parent );
                     auto const& filters = parentSection.getFilters();
                     // No filters -> no restrictions on running sections
                     if ( filters.empty() ) {
@@ -120,11 +125,11 @@ namespace Catch {
 
                     for ( auto const& child : m_children ) {
                         if ( child->isSectionTracker() &&
-                             std::find( filters.begin(),
-                                        filters.end(),
-                                        static_cast<SectionTracker&>( *child )
-                                            .trimmedName() ) !=
-                                 filters.end() ) {
+                             std::find(
+                                 filters.begin(),
+                                 filters.end(),
+                                 static_cast<SectionTracker const&>( *child )
+                                     .trimmedName() ) != filters.end() ) {
                             return true;
                         }
                     }

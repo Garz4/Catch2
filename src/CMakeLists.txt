@@ -86,8 +86,9 @@ set(INTERNAL_HEADERS
     ${SOURCES_DIR}/matchers/catch_matchers_container_properties.hpp
     ${SOURCES_DIR}/matchers/catch_matchers_contains.hpp
     ${SOURCES_DIR}/matchers/catch_matchers_exception.hpp
-    ${SOURCES_DIR}/matchers/catch_matchers_floating.hpp
+    ${SOURCES_DIR}/matchers/catch_matchers_floating_point.hpp
     ${SOURCES_DIR}/matchers/catch_matchers_predicate.hpp
+    ${SOURCES_DIR}/matchers/catch_matchers_quantifiers.hpp
     ${SOURCES_DIR}/matchers/catch_matchers_string.hpp
     ${SOURCES_DIR}/matchers/catch_matchers_templated.hpp
     ${SOURCES_DIR}/matchers/catch_matchers_vector.hpp
@@ -160,7 +161,7 @@ set(IMPL_SOURCES
     ${SOURCES_DIR}/interfaces/catch_interfaces_combined_tu.cpp
     ${SOURCES_DIR}/interfaces/catch_interfaces_reporter.cpp
     ${SOURCES_DIR}/internal/catch_list.cpp
-    ${SOURCES_DIR}/matchers/catch_matchers_floating.cpp
+    ${SOURCES_DIR}/matchers/catch_matchers_floating_point.cpp
     ${SOURCES_DIR}/matchers/catch_matchers_string.cpp
     ${SOURCES_DIR}/matchers/catch_matchers_templated.cpp
     ${SOURCES_DIR}/catch_message.cpp

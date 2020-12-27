@@ -12,7 +12,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <memory>
 
 #if defined(__clang__)
 #    pragma clang diagnostic push
@@ -30,11 +29,11 @@ namespace TestCaseTracking {
 
     ITracker::~ITracker() = default;
 
-    void ITracker::addChild( ITrackerPtr const& child ) {
-        m_children.push_back( child );
+    void ITracker::addChild( ITrackerPtr&& child ) {
+        m_children.push_back( std::move(child) );
     }
 
-    ITrackerPtr ITracker::findChild( NameAndLocation const& nameAndLocation ) {
+    ITracker* ITracker::findChild( NameAndLocation const& nameAndLocation ) {
         auto it = std::find_if(
             m_children.begin(),
             m_children.end(),
@@ -43,14 +42,17 @@ namespace TestCaseTracking {
                            nameAndLocation.location &&
                        tracker->nameAndLocation().name == nameAndLocation.name;
             } );
-        return ( it != m_children.end() ) ? *it : nullptr;
+        return ( it != m_children.end() ) ? it->get() : nullptr;
     }
 
 
 
     ITracker& TrackerContext::startRun() {
         using namespace std::string_literals;
-        m_rootTracker = std::make_shared<SectionTracker>( NameAndLocation( "{root}"s, CATCH_INTERNAL_LINEINFO ), *this, nullptr );
+        m_rootTracker = Catch::Detail::make_unique<SectionTracker>(
+            NameAndLocation( "{root}"s, CATCH_INTERNAL_LINEINFO ),
+            *this,
+            nullptr );
         m_currentTracker = nullptr;
         m_runState = Executing;
         return *m_rootTracker;
@@ -195,17 +197,19 @@ namespace TestCaseTracking {
     bool SectionTracker::isSectionTracker() const { return true; }
 
     SectionTracker& SectionTracker::acquire( TrackerContext& ctx, NameAndLocation const& nameAndLocation ) {
-        std::shared_ptr<SectionTracker> section;
+        SectionTracker* section;
 
         ITracker& currentTracker = ctx.currentTracker();
-        if( ITrackerPtr childTracker = currentTracker.findChild( nameAndLocation ) ) {
+        if ( ITracker* childTracker =
+                 currentTracker.findChild( nameAndLocation ) ) {
             assert( childTracker );
             assert( childTracker->isSectionTracker() );
-            section = std::static_pointer_cast<SectionTracker>( childTracker );
-        }
-        else {
-            section = std::make_shared<SectionTracker>( nameAndLocation, ctx, &currentTracker );
-            currentTracker.addChild( section );
+            section = static_cast<SectionTracker*>( childTracker );
+        } else {
+            auto newSection = Catch::Detail::make_unique<SectionTracker>(
+                nameAndLocation, ctx, &currentTracker );
+            section = newSection.get();
+            currentTracker.addChild( std::move( newSection ) );
         }
         if( !ctx.completedCycle() )
             section->tryOpen();
