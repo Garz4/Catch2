@@ -7,6 +7,10 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/matchers/catch_matchers_quantifiers.hpp>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+#include <catch2/matchers/catch_matchers_predicate.hpp>
+>>>>>>> e7a9d2374c4f9c6ed36f1224b68b1062fab25296
 =======
 #include <catch2/matchers/catch_matchers_predicate.hpp>
 >>>>>>> e7a9d2374c4f9c6ed36f1224b68b1062fab25296
